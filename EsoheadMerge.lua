@@ -17,6 +17,7 @@ function EHM.Initialize()
     EHM.dataDefault = {
         data = {}
     }
+    EH.minDistance = 0.000025 -- 0.005^2
 end
 
 function EHM.InitSavedVariables()
@@ -82,9 +83,39 @@ function EHM.Log(type, nodes, ...)
     end
 end
 
+function EH.xlocTolerance( position, x, minDistance, scale)
+    local distance
+    if scale == nil then
+        distance = 0.005
+    else
+        distance = scale
+    end
+
+    if (math.abs(position - x) > minDistance) and (math.abs(position - x) < distance)
+        return true
+    end
+
+    return false
+end
+
+function EH.ylocTolerance( position, y, minDistance, scale)
+    local distance
+    if scale == nil then
+        distance = 0.005
+    else
+        distance = scale
+    end
+
+    if (math.abs(position - y) > minDistance) and (math.abs(position - y) < distance)
+        return true
+    end
+
+    return false
+end
+
 -- Checks if we already have an entry for the object/npc within a certain x/y distance
 function EHM.LogCheck(type, nodes, x, y, scale)
-    local log = nil
+    local log
     local sv
 
     local distance
@@ -116,7 +147,7 @@ function EHM.LogCheck(type, nodes, x, y, scale)
     for i = 1, #sv do
         local item = sv[i]
 
-        if math.abs(item[1] - x) < distance and math.abs(item[2] - y) < distance then
+        if EH.xlocTolerance( item[1], x, EH.minDistance, distance) and EH.ylocTolerance( item[2], y, EH.minDistance, distance) then
             log = item
         end
     end
@@ -142,6 +173,25 @@ end
 -----------------------------------------
 --           Merge Nodes               --
 -----------------------------------------
+function EH.IsDupeHarvestNode(map, profession, locX, locY, stackCount, nodeName, ItemID, scale)
+
+    local distance
+    if scale == nil then
+        distance = 0.005
+    else
+        distance = scale
+    end
+
+    local nodes = EH.savedVars["harvest"]["data"][map][profession]
+    for _, node in pairs(nodes) do
+        if EH.xlocTolerance( node[1], locX, EH.minDistance, distance) and EH.ylocTolerance( node[2], locY, EH.minDistance, distance) and (node[4] == nodeName) then
+            return true
+        end
+    end
+
+    return false
+end
+
 
 function EHM.importFromEsohead()
     if not EH then
@@ -149,12 +199,13 @@ function EHM.importFromEsohead()
         return
     end
 
+    EHM.Debug("EsoheadMerge Starting Import")
     for category, data in pairs(EH.savedVars) do
         if category ~= "internal" and (category == "chest" or category == "fish") then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
-                    EHM.Debug(node[1] .. node[2])
+                    -- EHM.Debug(node[1] .. node[2])
                     dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], 0.05)
                     if not dupeNode then
                         EHM.Log(category, { map }, node[1], node[2])
@@ -163,9 +214,9 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "skyshard" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
-                    EHM.Debug(node[1] .. node[2])
+                    -- EHM.Debug(node[1] .. node[2])
                     dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], nil)
                     if not dupeNode then
                         EHM.Log(category, { map }, node[1], node[2])
@@ -174,10 +225,10 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "provisioning" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for itemId, nodes in pairs(location[5]) do
                     for v1, node in pairs(nodes) do
-                        EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
+                        -- EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
                         dupeNode = EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil)
                         if not dupeNode then
                             EHM.Log(category, {map, 5, itemId}, node[1], node[2], node[3], node[4])
@@ -187,16 +238,35 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "harvest" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for profession, nodes in pairs(location) do
                     for v1, node in pairs(nodes) do
-                        EHM.Debug("Profession : " .. profession .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4] .. " : " .. node[5])
                         dupeNode = EHM.LogCheck(category, {map, profession}, node[1], node[2], nil)
                         if not dupeNode then
-                            EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
-                        else -- when there is an existing node of a different type, save a new entry
-                            if dupeNode[4] ~= node[4] then
+                            if EHM.IsDupeHarvestNode(map, profession, node[1], node[2], node[3], node[4], node[5], nil) then
+                                -- EHM.Debug("--")
+                                -- EHM.Debug("Same Node!")
+                                -- EHM.Debug("--")
+                            else
+                                -- EHM.Debug("--")
+                                -- EHM.Debug("Dupenode was nil : Esohead node imported : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
                                 EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
+                                -- EHM.Debug("--")
+                            end
+                        else -- when there is an existing node of a different type, save a new entry
+                            if EHM.IsDupeHarvestNode(map, profession, node[1], node[2], node[3], node[4], node[5], nil) then
+                                -- EHM.Debug("--")
+                                -- EHM.Debug("Same Node!")
+                                -- EHM.Debug("--")
+                            else
+                                -- EHM.Debug("--")
+                                -- EHM.Debug("Conflict with existing node : " .. dupeNode[4] .. " : and node to be imported : " .. node[4])
+                                -- EHM.Debug("Esohead node to be imported : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
+                                -- EHM.Debug("EsoheadMerge Existing Node : " .. dupeNode[4] .. " :Profession : " .. profession .. " :X " .. dupeNode[1] .. " :Y " .. dupeNode[2] .. " :Stack " .. dupeNode[3] .. " :ItemID " .. dupeNode[5])
+                                -- EHM.Debug("--")
+                                EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
+                                -- EHM.Debug("Node Imported : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
+                                -- EHM.Debug("--")
                             end
                         end
                     end
@@ -204,10 +274,10 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "vendor" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for vendor, vendors in pairs(location) do
                     for v1, inventory in pairs(vendors) do
-                        EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
+                        -- EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
                         dupeNode = EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1)
                         if not dupeNode then
                             EHM.Log(category, {map, vendor}, inventory[1], inventory[2], inventory[3])
@@ -217,10 +287,10 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "quest" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for quest, quests in pairs(location) do
                     for v1, info in pairs(quests) do
-                        EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
+                        -- EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
                         dupeNode = EHM.LogCheck(category, {map, quest}, info[1], info[2], 0.05)
                         if not dupeNode then
                             EHM.Log(category, { map, quest }, info[1], info[2], info[3], info[4], info[5])
@@ -230,10 +300,10 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "npc" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for npc, npcs in pairs(location) do
                     for v1, info in pairs(npcs) do
-                        EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
+                        -- EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
                         dupeNode = EHM.LogCheck(category, { map, npc }, info[1], info[2], 0.05)
                         if not dupeNode then
                             EHM.Log(category, { map, npc }, info[1], info[2], info[3])
@@ -243,10 +313,10 @@ function EHM.importFromEsohead()
             end
         elseif category ~= "internal" and category == "book" then
             for map, location in pairs(data.data) do
-                EHM.Debug(category .. map)
+                -- EHM.Debug(category .. map)
                 for book, books in pairs(location) do
                     for v1, info in pairs(books) do
-                        EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
+                        -- EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
                         dupeNode = EHM.LogCheck(category, {map, book}, info[1], info[2], nil)
                         if not dupeNode then
                             EHM.Log(category, {map, book}, info[1], info[2])
@@ -256,6 +326,7 @@ function EHM.importFromEsohead()
             end
         end
     end
+    EHM.Debug("Import Complete")
 end
 
 -----------------------------------------
@@ -337,7 +408,7 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
         end
 
     elseif commands[1] == "import" then
-    
+
         EHM.importFromEsohead()
 
     elseif commands[1] == "reset" then
