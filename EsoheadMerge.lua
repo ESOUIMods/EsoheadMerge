@@ -17,7 +17,7 @@ function EHM.Initialize()
     EHM.dataDefault = {
         data = {}
     }
-    EH.minDistance = 0.000025 -- 0.005^2
+    EHM.minDistance = 0.000025 -- 0.005^2
 end
 
 function EHM.InitSavedVariables()
@@ -83,7 +83,7 @@ function EHM.Log(type, nodes, ...)
     end
 end
 
-function EH.xlocTolerance( position, x, minDistance, scale)
+function EHM.xlocTolerance( position, x, minDistance, scale)
     local distance
     if scale == nil then
         distance = 0.005
@@ -91,14 +91,14 @@ function EH.xlocTolerance( position, x, minDistance, scale)
         distance = scale
     end
 
-    if (math.abs(position - x) > minDistance) and (math.abs(position - x) < distance)
+    if (math.abs(position - x) > minDistance) and (math.abs(position - x) < distance) then
         return true
     end
 
     return false
 end
 
-function EH.ylocTolerance( position, y, minDistance, scale)
+function EHM.ylocTolerance( position, y, minDistance, scale)
     local distance
     if scale == nil then
         distance = 0.005
@@ -106,7 +106,7 @@ function EH.ylocTolerance( position, y, minDistance, scale)
         distance = scale
     end
 
-    if (math.abs(position - y) > minDistance) and (math.abs(position - y) < distance)
+    if (math.abs(position - y) > minDistance) and (math.abs(position - y) < distance) then
         return true
     end
 
@@ -147,7 +147,7 @@ function EHM.LogCheck(type, nodes, x, y, scale)
     for i = 1, #sv do
         local item = sv[i]
 
-        if EH.xlocTolerance( item[1], x, EH.minDistance, distance) and EH.ylocTolerance( item[2], y, EH.minDistance, distance) then
+        if EHM.xlocTolerance( item[1], x, EHM.minDistance, distance) and EHM.ylocTolerance( item[2], y, EHM.minDistance, distance) then
             log = item
         end
     end
@@ -173,7 +173,7 @@ end
 -----------------------------------------
 --           Merge Nodes               --
 -----------------------------------------
-function EH.IsDupeHarvestNode(map, profession, locX, locY, stackCount, nodeName, ItemID, scale)
+function EHM.IsDupeHarvestNode(map, profession, locX, locY, stackCount, nodeName, ItemID, scale)
 
     local distance
     if scale == nil then
@@ -182,9 +182,9 @@ function EH.IsDupeHarvestNode(map, profession, locX, locY, stackCount, nodeName,
         distance = scale
     end
 
-    local nodes = EH.savedVars["harvest"]["data"][map][profession]
+    local nodes = EHM.savedVars["harvest"]["data"][map][profession]
     for _, node in pairs(nodes) do
-        if EH.xlocTolerance( node[1], locX, EH.minDistance, distance) and EH.ylocTolerance( node[2], locY, EH.minDistance, distance) and (node[4] == nodeName) then
+        if EHM.xlocTolerance( node[1], locX, EHM.minDistance, distance) and EHM.ylocTolerance( node[2], locY, EHM.minDistance, distance) and (node[4] == nodeName) then
             return true
         end
     end
