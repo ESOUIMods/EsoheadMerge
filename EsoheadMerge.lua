@@ -108,10 +108,10 @@ function EHM.LogCheck(type, nodes, x, y, scale, name)
             node = string.gsub(node, '\"', '\'')
         end
 
-        if sv[nodes[i]] == nil then
-            sv[nodes[i]] = {}
+        if sv[node] == nil then
+            sv[node] = {}
         end
-        sv = sv[nodes[i]]
+        sv = sv[node]
     end
 
     --[[ d("sv " .. tostring(#sv)) ]]--
