@@ -17,7 +17,8 @@ function EHM.Initialize()
     EHM.dataDefault = {
         data = {}
     }
-    EHM.minDistance = 0.000025 -- 0.005^2
+    EHM.minDefault = 0.000025 -- 0.005^2
+    EHM.minReticleover = 0.000049 -- 0.007^2
 end
 
 function EHM.InitSavedVariables()
@@ -83,43 +84,17 @@ function EHM.Log(type, nodes, ...)
     end
 end
 
-function EHM.locTolerance( nodePos, charPos, minDistance, scale)
-    local distance
-    local typeFound = 0
-    if scale == nil then
-        distance = 0.005
-    else
-        distance = scale
-    end
-
-    if math.abs(nodePos - charPos) == 0 then
-        typeFound = 1
-    elseif (math.abs(nodePos - charPos) > minDistance) and (math.abs(nodePos - charPos) < distance) then
-        typeFound = 2
-    elseif (math.abs(nodePos - charPos) > 0) and (math.abs(nodePos - charPos) < minDistance) then
-        typeFound = 3
-    end
-
-    return typeFound
-end
-
 -- Checks if we already have an entry for the object/npc within a certain x/y distance
-function EHM.LogCheck(type, nodes, x, y, scale, nodeToCheck)
-    -- replaced log with nodeFound in return
-    local nodeFound = nil
-    -- typeFound : 0) no node 1) duplicate node 2) node exists but different node name
-    local typeFound = 0
-    local sameLocation = false
-    local nodeName = false
+function EHM.LogCheck(type, nodes, x, y, scale, name)
+    local log
     local sv
 
     local distance
     if scale == nil then
-        distance = 0.005
+        distance = EHM.minDefault
     else
         distance = scale
     end
-
 
     if EHM.savedVars[type] == nil or EHM.savedVars[type].data == nil then
         return nil
@@ -133,85 +108,41 @@ function EHM.LogCheck(type, nodes, x, y, scale, nodeToCheck)
             node = string.gsub(node, '\"', '\'')
         end
 
-        if sv[node] == nil then
-            sv[node] = {}
+        if sv[nodes[i]] == nil then
+            sv[nodes[i]] = {}
         end
-        sv = sv[node]
+        sv = sv[nodes[i]]
     end
 
+    --d("sv " .. tostring(#sv))
     for i = 1, #sv do
         local item = sv[i]
-        
-        if type == "harvest" then
-            if nodeToCheck ~= nil and nodeToCheck == item[4] then
-                nodeName = true
+
+        dx = item[1] - x
+        dy = item[2] - y
+        -- (x - center_x)2 + (y - center_y)2 = r2, where center is the player
+        dist = math.pow(dx, 2) + math.pow(dy, 2)
+        --d(string.format("Distance %10.5f", distance))
+        --d(string.format("Distance X %10.5f", math.abs(item[1] - x)))
+        --d(string.format("Distance Y %10.5f", math.abs(item[2] - y)))
+        if dx <= 0 and dy <= 0 then
+            -- d("Dupe Node!")
+            log = item
+        elseif dist < distance then
+            --d("Within area of the circle!")
+            if name == nil then -- name is nil because it's not harvesting
+                --d("Name is nil")
+                log = item
+            else -- harvesting only
+                if item[4] == name then
+                    --d("Name is equal")
+                    log = item
+                end
             end
         end
-            
-        -- same location
-        if EHM.locTolerance( item[1], x, EHM.minDistance, distance) == 1 and EHM.locTolerance( item[2], y, EHM.minDistance, distance ) == 1 then
-            nodeFound = item
-            sameLocation = true -- only true when difference of X and Y are 0
-        -- nodes are close to each other
-        elseif EHM.locTolerance( item[1], x, EHM.minDistance, distance) == 2 and EHM.locTolerance( item[2], y, EHM.minDistance, distance ) == 2 then
-            nodeFound = item
-        -- nodes are very close to each other, maybe too close
-        elseif EHM.locTolerance( item[1], x, EHM.minDistance, distance) == 3 and EHM.locTolerance( item[2], y, EHM.minDistance, distance ) == 3 then
-            nodeFound = item
-            typeFound = 4
-        end
     end
 
-    -- no existing node
-    if nodeFound == nil then
-        typeFound = 0
-    -- Duplicate node
-    elseif sameLocation and nodeName then
-        typeFound = 1
-    -- Duplicate node when not using a Node Name, different from above because node will be false 
-    elseif sameLocation and nodeFound ~= nil and nodeToCheck == nil then
-        typeFound = 1
-    -- Existing node different name
-    elseif not sameLocation and not nodeName then
-        typeFound = 2
-    -- Existing node, same name but, should be different
-    elseif not sameLocation and nodeName then
-        typeFound = 3
-    -- Warn user that a condition wasn't met
-    else
-        d("A condition was not met, please notify Sharlikran")
-        
-        d("Import Type : " .. type)
-
-        if nodeToCheck ~= nil then
-            d("nodeToCheck was : " .. nodeToCheck)
-        else
-            d("Node to check is nil")
-        end
-
-        if nodeFound == nil then
-            d("nodeFound was nil!")
-        else
-            d("nodeFound was NOT nil!")
-        end
-
-        if sameLocation then
-            d("sameLocation is true!")
-        else
-            d("sameLocation is false!")
-        end
-
-        if nodeName then
-            d("nodeName is true!")
-        else
-            d("nodeName is false!")
-        end
-    end
-
-    return {
-        nodeType = typeFound,
-        nodeInfo = nodeFound
-    }
+    return log
 end
 
 -- formats a number with commas on thousands
@@ -245,8 +176,8 @@ function EHM.importFromEsohead()
                 -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
                     -- EHM.Debug(node[1] .. node[2])
-                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], 0.05, nil)
-                    if not dupeNode.nodeInfo then
+                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil)
+                    if not dupeNode then
                         EHM.Log(category, { map }, node[1], node[2])
                     end
                 end
@@ -256,8 +187,8 @@ function EHM.importFromEsohead()
                 -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
                     -- EHM.Debug(node[1] .. node[2])
-                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], nil, nil)
-                    if not dupeNode.nodeInfo then
+                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil)
+                    if not dupeNode then
                         EHM.Log(category, { map }, node[1], node[2])
                     end
                 end
@@ -269,7 +200,7 @@ function EHM.importFromEsohead()
                     for v1, node in pairs(nodes) do
                         -- EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
                         dupeNode = EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil, nil)
-                        if not dupeNode.nodeInfo then
+                        if not dupeNode then
                             EHM.Log(category, {map, 5, itemId}, node[1], node[2], node[3], node[4])
                         end
                     end
@@ -281,33 +212,8 @@ function EHM.importFromEsohead()
                 for profession, nodes in pairs(location) do
                     for v1, node in pairs(nodes) do
                         dupeNode = EHM.LogCheck(category, {map, profession}, node[1], node[2], nil, node[4])
-                        -- Duplicate node don't add it again
-                        if dupeNode.nodeType == 1 then
-                            -- EHM.Debug("--")
-                            -- EHM.Debug("Same Node!")
-                            -- EHM.Debug("Node existed : " .. dupeNode.nodeInfo[4] .. " :Profession : " .. profession .. " :X " .. dupeNode.nodeInfo[1] .. " :Y " .. dupeNode.nodeInfo[2] .. " :Stack " .. dupeNode.nodeInfo[3] .. " :ItemID " .. dupeNode.nodeInfo[5])
-                            -- EHM.Debug("Node to be imported : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
-                            -- EHM.Debug("--")
-                        -- No node exists or a node with a different name exists
-                        elseif dupeNode.nodeType ~= 1 then
-                            -- EHM.Debug("--")
-
-                            -- this is for debugging only
-                            -- No previous node existed
-                            -- if dupeNode.nodeType == 0 then
-                                -- EHM.Debug("Imported : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
-                            -- It is type 2, 3, 4 which is under minDistance
-                            -- else
-                                -- EHM.Debug("Node existed : " .. dupeNode.nodeInfo[4] .. " :Profession : " .. profession .. " :X " .. dupeNode.nodeInfo[1] .. " :Y " .. dupeNode.nodeInfo[2] .. " :Stack " .. dupeNode.nodeInfo[3] .. " :ItemID " .. dupeNode.nodeInfo[5])
-                                -- EHM.Debug("Different node Added : " .. node[4] .. " :Profession : " .. profession .. " :X " .. node[1] .. " :Y " .. node[2] .. " :Stack " .. node[3] .. " :ItemID " .. node[5])
-                            -- end
-
-                            -- It is type 0, 2, 3, or 4 which is under minDistance
-                            -- If node is NOT under the minDistance add it
-                            if dupeNode.nodeType ~= 4 then
-                                EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
-                            end
-                            -- EHM.Debug("--")
+                        if not dupeNode then
+                            EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
                         end
                     end
                 end
@@ -319,7 +225,7 @@ function EHM.importFromEsohead()
                     for v1, inventory in pairs(vendors) do
                         -- EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
                         dupeNode = EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1, nil)
-                        if not dupeNode.nodeInfo then
+                        if not dupeNode then
                             EHM.Log(category, {map, vendor}, inventory[1], inventory[2], inventory[3])
                         end
                     end
@@ -331,8 +237,8 @@ function EHM.importFromEsohead()
                 for quest, quests in pairs(location) do
                     for v1, info in pairs(quests) do
                         -- EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        dupeNode = EHM.LogCheck(category, {map, quest}, info[1], info[2], 0.05, nil)
-                        if not dupeNode.nodeInfo then
+                        dupeNode = EHM.LogCheck(category, {map, quest}, info[1], info[2], EHM.minReticleover, nil)
+                        if not dupeNode then
                             EHM.Log(category, { map, quest }, info[1], info[2], info[3], info[4], info[5])
                         end
                     end
@@ -344,8 +250,8 @@ function EHM.importFromEsohead()
                 for npc, npcs in pairs(location) do
                     for v1, info in pairs(npcs) do
                         -- EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        dupeNode = EHM.LogCheck(category, { map, npc }, info[1], info[2], 0.05, nil)
-                        if not dupeNode.nodeInfo then
+                        dupeNode = EHM.LogCheck(category, { map, npc }, info[1], info[2], EHM.minReticleover, nil)
+                        if not dupeNode then
                             EHM.Log(category, { map, npc }, info[1], info[2], info[3])
                         end
                     end
@@ -358,7 +264,7 @@ function EHM.importFromEsohead()
                     for v1, info in pairs(books) do
                         -- EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
                         dupeNode = EHM.LogCheck(category, {map, book}, info[1], info[2], nil, nil)
-                        if not dupeNode.nodeInfo then
+                        if not dupeNode then
                             EHM.Log(category, {map, book}, info[1], info[2])
                         end
                     end
