@@ -1,4 +1,4 @@
-##0.1.2
+##0.1.3
 
 Bugfixes
 - Bug Fix for node parsing
