@@ -1,3 +1,8 @@
+##0.1.4
+
+Updates
+- Updated notifications to specifically state that you are using EsoheadMerge
+
 ##0.1.3
 
 Bugfixes
