@@ -411,7 +411,7 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
     end
 
     if #commands == 0 then
-        return EHM.Debug("Please enter a valid command")
+        return EHM.Debug("Please enter a valid EsoheadMerge command")
     end
 
     if #commands == 2 and commands[1] == "debug" then
@@ -434,14 +434,14 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
                     EHM.savedVars[type].data = {}
                 end
             end
-            EHM.Debug("Saved data has been completely reset")
+            EHM.Debug("EsoheadMerge saved data has been completely reset")
         else
             if commands[2] ~= "internal" then
                 if EHM.IsValidCategory(commands[2]) then
                     EHM.savedVars[commands[2]].data = {}
-                    EHM.Debug("Saved data : " .. commands[2] .. " has been reset")
+                    EHM.Debug("EsoheadMerge saved data : " .. commands[2] .. " has been reset")
                 else
-                    return EHM.Debug("Please enter a valid category to reset")
+                    return EHM.Debug("Please enter a valid EsoheadMerge category to reset")
                 end
             end
         end
