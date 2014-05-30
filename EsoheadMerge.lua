@@ -85,21 +85,25 @@ function EHM.Log(type, nodes, ...)
 end
 
 -- Checks if we already have an entry for the object/npc within a certain x/y distance
-function EHM.LogCheck(type, nodes, x, y, scale, name)
-    local log
+function EH.LogCheck(type, nodes, x, y, scale, name)
+    local log = true
     local sv
+
+    if x <= 0 or y <= 0 then
+        return false
+    end
+
+    if EH.savedVars[type] == nil or EH.savedVars[type].data == nil then
+        return true
+    else
+        sv = EH.savedVars[type].data
+    end
 
     local distance
     if scale == nil then
-        distance = EHM.minDefault
+        distance = EH.minDefault
     else
         distance = scale
-    end
-
-    if EHM.savedVars[type] == nil or EHM.savedVars[type].data == nil then
-        return nil
-    else
-        sv = EHM.savedVars[type].data
     end
 
     for i = 1, #nodes do
@@ -114,7 +118,6 @@ function EHM.LogCheck(type, nodes, x, y, scale, name)
         sv = sv[node]
     end
 
-    --[[ d("sv " .. tostring(#sv)) ]]--
     for i = 1, #sv do
         local item = sv[i]
 
@@ -122,16 +125,21 @@ function EHM.LogCheck(type, nodes, x, y, scale, name)
         dy = item[2] - y
         -- (x - center_x)2 + (y - center_y)2 = r2, where center is the player
         dist = math.pow(dx, 2) + math.pow(dy, 2)
-        -- d(string.format("distance argument : %10.7f", distance) )
-        -- d(string.format("radius : %10.7f", dist) )
-        -- d(" 1) : " .. item[1] .. " 2) : " .. item[2] .. " 3) : " .. item[3] .. " 4) : " .. tostring(item[4]))
-        if dist < distance then
-            if name == nil then -- name is nil because it's not harvesting
-                log = item
+        -- both ensure that the entire table isn't parsed
+        if dx <= 0 and dy <= 0 then -- at player location
+            if name == nil then -- npc, quest, vendor all but harvesting
+                return false
             else -- harvesting only
                 if item[4] == name then
-                    -- d("Name was the same!")
-                    log = item
+                    return false
+                end
+            end
+        elseif dist < distance then -- near player location
+            if name == nil then -- npc, quest, vendor all but harvesting
+                return false
+            else -- harvesting only
+                if item[4] == name then
+                    return false
                 end
             end
         end
@@ -171,8 +179,7 @@ function EHM.importFromEsohead()
                 -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
                     -- EHM.Debug(node[1] .. node[2])
-                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil)
-                    if not dupeNode then
+                    if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
                         EHM.Log(category, { map }, node[1], node[2])
                     end
                 end
@@ -182,8 +189,7 @@ function EHM.importFromEsohead()
                 -- EHM.Debug(category .. map)
                 for v1, node in pairs(location) do
                     -- EHM.Debug(node[1] .. node[2])
-                    dupeNode = EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil)
-                    if not dupeNode then
+                    if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
                         EHM.Log(category, { map }, node[1], node[2])
                     end
                 end
@@ -194,8 +200,7 @@ function EHM.importFromEsohead()
                 for itemId, nodes in pairs(location[5]) do
                     for v1, node in pairs(nodes) do
                         -- EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
-                        dupeNode = EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil, nil)
-                        if not dupeNode then
+                        if EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil, nil) then
                             EHM.Log(category, {map, 5, itemId}, node[1], node[2], node[3], node[4])
                         end
                     end
@@ -206,8 +211,7 @@ function EHM.importFromEsohead()
                 -- EHM.Debug(category .. map)
                 for profession, nodes in pairs(location) do
                     for v1, node in pairs(nodes) do
-                        dupeNode = EHM.LogCheck(category, {map, profession}, node[1], node[2], nil, node[4])
-                        if not dupeNode then
+                        if EHM.LogCheck(category, {map, profession}, node[1], node[2], nil, node[4]) then
                             EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
                         end
                     end
@@ -219,8 +223,7 @@ function EHM.importFromEsohead()
                 for vendor, vendors in pairs(location) do
                     for v1, inventory in pairs(vendors) do
                         -- EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
-                        dupeNode = EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1, nil)
-                        if not dupeNode then
+                        if EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1, nil) then
                             EHM.Log(category, {map, vendor}, inventory[1], inventory[2], inventory[3])
                         end
                     end
@@ -232,8 +235,7 @@ function EHM.importFromEsohead()
                 for quest, quests in pairs(location) do
                     for v1, info in pairs(quests) do
                         -- EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        dupeNode = EHM.LogCheck(category, {map, quest}, info[1], info[2], EHM.minReticleover, nil)
-                        if not dupeNode then
+                        if EHM.LogCheck(category, {map, quest}, info[1], info[2], EHM.minReticleover, nil) then
                             EHM.Log(category, { map, quest }, info[1], info[2], info[3], info[4], info[5])
                         end
                     end
@@ -245,8 +247,7 @@ function EHM.importFromEsohead()
                 for npc, npcs in pairs(location) do
                     for v1, info in pairs(npcs) do
                         -- EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        dupeNode = EHM.LogCheck(category, { map, npc }, info[1], info[2], EHM.minReticleover, nil)
-                        if not dupeNode then
+                        if EHM.LogCheck(category, { map, npc }, info[1], info[2], EHM.minReticleover, nil) then
                             EHM.Log(category, { map, npc }, info[1], info[2], info[3])
                         end
                     end
@@ -258,8 +259,7 @@ function EHM.importFromEsohead()
                 for book, books in pairs(location) do
                     for v1, info in pairs(books) do
                         -- EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        dupeNode = EHM.LogCheck(category, {map, book}, info[1], info[2], nil, nil)
-                        if not dupeNode then
+                        if EHM.LogCheck(category, {map, book}, info[1], info[2], nil, nil) then
                             EHM.Log(category, {map, book}, info[1], info[2])
                         end
                     end
