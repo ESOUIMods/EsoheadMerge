@@ -85,7 +85,7 @@ function EHM.Log(type, nodes, ...)
 end
 
 -- Checks if we already have an entry for the object/npc within a certain x/y distance
-function EH.LogCheck(type, nodes, x, y, scale, name)
+function EHM.LogCheck(type, nodes, x, y, scale, name)
     local log = true
     local sv
 
@@ -93,15 +93,15 @@ function EH.LogCheck(type, nodes, x, y, scale, name)
         return false
     end
 
-    if EH.savedVars[type] == nil or EH.savedVars[type].data == nil then
+    if EHM.savedVars[type] == nil or EHM.savedVars[type].data == nil then
         return true
     else
-        sv = EH.savedVars[type].data
+        sv = EHM.savedVars[type].data
     end
 
     local distance
     if scale == nil then
-        distance = EH.minDefault
+        distance = EHM.minDefault
     else
         distance = scale
     end
