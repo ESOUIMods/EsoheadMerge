@@ -1,7 +1,17 @@
+##0.1.8
+
+Bugfix
+- Duplicate node verification was too strict
+
+##0.1.7
+
+Bugfixes
+- Fixed duplicate node verification when name was different
+
 ##0.1.6
 
 Updates
-- Fixed namespace mismatch
+- Fixed name space mismatch
 
 ##0.1.5
 
