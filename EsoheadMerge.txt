@@ -1,6 +1,6 @@
 ## Title: EsoheadMerge
 ## Author: Sharlikran
-## Version: 0.1.8
+## Version: 0.1.9
 ## APIVersion: 100004
 ## SavedVariables: EsoheadMerge_SavedVariables
 

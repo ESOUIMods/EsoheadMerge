@@ -23,7 +23,7 @@ end
 
 function EHM.InitSavedVariables()
     EHM.savedVars = {
-        ["internal"]     = ZO_SavedVars:NewAccountWide("EsoheadMerge_SavedVariables", 1, "internal", { debug = EHM.debugDefault, language = "" }),
+        ["internal"]     = ZO_SavedVars:NewAccountWide("EsoheadMerge_SavedVariables", 1, "internal", { debug = EHM.debugDefault, delocalize = false, language = "" }),
         ["skyshard"]     = ZO_SavedVars:NewAccountWide("EsoheadMerge_SavedVariables", 2, "skyshard", EHM.dataDefault),
         ["book"]         = ZO_SavedVars:NewAccountWide("EsoheadMerge_SavedVariables", 2, "book", EHM.dataDefault),
         ["harvest"]      = ZO_SavedVars:NewAccountWide("EsoheadMerge_SavedVariables", 4, "harvest", EHM.dataDefault),
@@ -160,6 +160,33 @@ end
 -----------------------------------------
 --           Merge Nodes               --
 -----------------------------------------
+function EHM.isMapLocalized(mapName)
+    if EHM.savedVars["internal"].delocalize == 0 then
+        return false
+    end
+
+    if string.find(mapName, "^", 1, true) == nil then
+        return false
+    end
+    return true
+end
+
+function EHM.prepareForImporting()
+    
+    EHM.Debug("EsoheadMerge Starting Import Cleanup")
+
+    for type,sv in pairs(EHM.savedVars) do
+        if type ~= "internal" and
+            type ~= "harvest" and
+            type ~= "chest" and
+            type ~= "fish" then
+            EHM.savedVars[type].data = {}
+        end
+    end
+
+    EHM.Debug("Import Cleanup Complete")
+end
+
 function EHM.importFromEsohead()
     if not EH then
         d("Please enable the Esohead addon to import data!")
@@ -170,91 +197,107 @@ function EHM.importFromEsohead()
     for category, data in pairs(EH.savedVars) do
         if category ~= "internal" and (category == "chest" or category == "fish") then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for v1, node in pairs(location) do
-                    -- EHM.Debug(node[1] .. node[2])
-                    if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
-                        EHM.Log(category, { map }, node[1], node[2])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for v1, node in pairs(location) do
+                        -- EHM.Debug(node[1] .. node[2])
+                        if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
+                            EHM.Log(category, { map }, node[1], node[2])
+                        end
                     end
                 end
             end
         elseif category ~= "internal" and category == "skyshard" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for v1, node in pairs(location) do
-                    -- EHM.Debug(node[1] .. node[2])
-                    if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
-                        EHM.Log(category, { map }, node[1], node[2])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for v1, node in pairs(location) do
+                        -- EHM.Debug(node[1] .. node[2])
+                        if EHM.LogCheck(category, { map }, node[1], node[2], EHM.minReticleover, nil) then
+                            EHM.Log(category, { map }, node[1], node[2])
+                        end
                     end
                 end
             end
         elseif category ~= "internal" and category == "provisioning" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for itemId, nodes in pairs(location[5]) do
-                    for v1, node in pairs(nodes) do
-                        -- EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
-                        if EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil, nil) then
-                            EHM.Log(category, {map, 5, itemId}, node[1], node[2], node[3], node[4])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for itemId, nodes in pairs(location[5]) do
+                        for v1, node in pairs(nodes) do
+                            -- EHM.Debug("ItemID : " .. itemId .. " : " .. node[1] .. " : " .. node[2] .. " : " .. node[3] .. " : " .. node[4])
+                            if EHM.LogCheck(category, {map, 5, itemId}, node[1], node[2], nil, nil) then
+                                EHM.Log(category, {map, 5, itemId}, node[1], node[2], node[3], node[4])
+                            end
                         end
                     end
                 end
             end
         elseif category ~= "internal" and category == "harvest" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for profession, nodes in pairs(location) do
-                    for v1, node in pairs(nodes) do
-                        if EHM.LogCheck(category, {map, profession}, node[1], node[2], nil, node[4]) then
-                            EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for profession, nodes in pairs(location) do
+                        for v1, node in pairs(nodes) do
+                            if EHM.LogCheck(category, {map, profession}, node[1], node[2], nil, node[4]) then
+                                EHM.Log(category, {map, profession}, node[1], node[2], node[3], node[4], node[5])
+                            end
                         end
                     end
                 end
             end
         elseif category ~= "internal" and category == "vendor" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for vendor, vendors in pairs(location) do
-                    for v1, inventory in pairs(vendors) do
-                        -- EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
-                        if EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1, nil) then
-                            EHM.Log(category, {map, vendor}, inventory[1], inventory[2], inventory[3])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for vendor, vendors in pairs(location) do
+                        for v1, inventory in pairs(vendors) do
+                            -- EHM.Debug("Vendor : " .. vendor .." : X, Y : " .. inventory[1] .. " : " .. inventory[2])
+                            if EHM.LogCheck(category, {map, vendor}, inventory[1], inventory[2], 0.1, nil) then
+                                EHM.Log(category, {map, vendor}, inventory[1], inventory[2], inventory[3])
+                            end
                         end
                     end
                 end
             end
         elseif category ~= "internal" and category == "quest" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for quest, quests in pairs(location) do
-                    for v1, info in pairs(quests) do
-                        -- EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        if EHM.LogCheck(category, {map, quest}, info[1], info[2], EHM.minReticleover, nil) then
-                            EHM.Log(category, { map, quest }, info[1], info[2], info[3], info[4], info[5])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for quest, quests in pairs(location) do
+                        for v1, info in pairs(quests) do
+                            -- EHM.Debug("Quest : " .. quest .." : X, Y : " .. info[1] .. " : " .. info[2])
+                            if EHM.LogCheck(category, {map, quest}, info[1], info[2], EHM.minReticleover, nil) then
+                                EHM.Log(category, { map, quest }, info[1], info[2], info[3], info[4], info[5])
+                            end
                         end
                     end
                 end
             end
         elseif category ~= "internal" and category == "npc" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for npc, npcs in pairs(location) do
-                    for v1, info in pairs(npcs) do
-                        -- EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        if EHM.LogCheck(category, { map, npc }, info[1], info[2], EHM.minReticleover, nil) then
-                            EHM.Log(category, { map, npc }, info[1], info[2], info[3])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for npc, npcs in pairs(location) do
+                        for v1, info in pairs(npcs) do
+                            -- EHM.Debug("Npc : " .. npc .." : X, Y : " .. info[1] .. " : " .. info[2])
+                            if EHM.LogCheck(category, { map, npc }, info[1], info[2], EHM.minReticleover, nil) then
+                                EHM.Log(category, { map, npc }, info[1], info[2], info[3])
+                            end
                         end
                     end
                 end
             end
         elseif category ~= "internal" and category == "book" then
             for map, location in pairs(data.data) do
-                -- EHM.Debug(category .. map)
-                for book, books in pairs(location) do
-                    for v1, info in pairs(books) do
-                        -- EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
-                        if EHM.LogCheck(category, {map, book}, info[1], info[2], nil, nil) then
-                            EHM.Log(category, {map, book}, info[1], info[2])
+                if not EHM.isMapLocalized(map) then
+                    -- EHM.Debug(category .. map)
+                    for book, books in pairs(location) do
+                        for v1, info in pairs(books) do
+                            -- EHM.Debug("Book Name : " .. book .." : X, Y : " .. info[1] .. " : " .. info[2])
+                            if EHM.LogCheck(category, {map, book}, info[1], info[2], nil, nil) then
+                                EHM.Log(category, {map, book}, info[1], info[2])
+                            end
                         end
                     end
                 end
@@ -367,6 +410,19 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
     elseif commands[1] == "import" then
 
         EHM.importFromEsohead()
+
+    elseif commands[1] == "prep" then
+        
+        EHM.prepareForImporting()
+        
+    elseif #commands == 2 and commands[1] == "ignore" then
+        if commands[2] == "on" then
+            EHM.Debug("EsoheadMerge delocalizer toggled on")
+            EHM.savedVars["internal"].delocalize = 1
+        elseif commands[2] == "off" then
+            EHM.Debug("EsoheadMerge delocalizer toggled off")
+            EHM.savedVars["internal"].delocalize = 0
+        end
 
     elseif commands[1] == "reset" then
         if #commands ~= 2 then 
