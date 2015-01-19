@@ -172,7 +172,7 @@ function EHM.isMapLocalized(mapName)
 end
 
 function EHM.prepareForImporting()
-    
+
     EHM.Debug("EsoheadMerge Starting Import Cleanup")
 
     for type,sv in pairs(EHM.savedVars) do
@@ -412,9 +412,9 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
         EHM.importFromEsohead()
 
     elseif commands[1] == "prep" then
-        
+
         EHM.prepareForImporting()
-        
+
     elseif #commands == 2 and commands[1] == "ignore" then
         if commands[2] == "on" then
             EHM.Debug("EsoheadMerge delocalizer toggled on")
@@ -425,7 +425,7 @@ SLASH_COMMANDS["/esomerge"] = function (cmd)
         end
 
     elseif commands[1] == "reset" then
-        if #commands ~= 2 then 
+        if #commands ~= 2 then
             for type,sv in pairs(EHM.savedVars) do
                 if type ~= "internal" then
                     EHM.savedVars[type].data = {}

@@ -1,7 +1,7 @@
 ## Title: EsoheadMerge
 ## Author: Sharlikran
-## Version: 0.2.0
-## APIVersion: 100007
+## Version: 0.2.1
+## APIVersion: 100010
 ## SavedVariables: EsoheadMerge_SavedVariables
 
 EsoheadMerge.lua
