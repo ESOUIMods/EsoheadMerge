@@ -1,3 +1,8 @@
+##0.2.2
+
+Updates
+- Changed version number; checked change notes and routines should not be effected
+
 ##0.2.1
 
 Updates
